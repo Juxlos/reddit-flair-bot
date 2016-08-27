@@ -50,24 +50,31 @@ class FlairBot:
             self.process_pms()
 
     def process_pms(self):
+        done_pm = []
         for pm in self.pms:
-            subject = str(pm.subject)
-            if subject.lower() in self.possible_flairs:
-                author = str(pm.author)  # Author of the PM
-                if author.lower() in (user.lower() for user in self.BLACKLIST):
-                    continue
-                flair_class = subject.lower()  # Sets flair class according to subject
-                subreddit = self.r.get_subreddit(self.TARGET_SUB)
-                if flair_class in self.possible_flairs:
-                    # Get the flair text that corresponds with the pm body
-                    flair_text = str(pm.body)
-                    if len(flair_text) > 50:
-                        flair_text = ''
-                    subreddit.set_flair(author, flair_text, flair_class)
-                    if self.LOGGING:
-                        self.log(author, flair_class, flair_text)
-                pm.mark_as_read()  # Mark processed PM as read
-        sys.exit()
+            if pm not in done_pm:
+                subject = str(pm.subject)
+                if subject.lower() in self.possible_flairs:
+                    author = str(pm.author)  # Author of the PM
+                    if author.lower() in (user.lower() for user in self.BLACKLIST):
+                        continue
+                    flair_class = subject.lower()  # Sets flair class according to subject
+                    subreddit = self.r.get_subreddit(self.TARGET_SUB)
+                    if flair_class in self.possible_flairs:
+                        # Get the flair text that corresponds with the pm body
+                        if 'Flair Text' in str(pm.body):
+                            flair_text = ''
+                        else:
+                            flair_text = str(pm.body)
+                        if len(flair_text) > 50:
+                            flair_text = ''
+                        subreddit.set_flair(author, flair_text, flair_class)
+                        if self.LOGGING:
+                            self.log(author, flair_class, flair_text)
+                    pm.mark_as_read()  # Mark processed PM as read
+                    msg = 'This is an automated message. Your flair has been set to `{0}`-{1}'.format(flair_class, flair_text)
+                    pm.reply(msg)
+                    done_pm.append(pm)
         
     def log(self, author, flair_class, flair_text):
         with open('log.txt', 'a') as logfile:
@@ -77,4 +84,3 @@ class FlairBot:
                 + flair_class + ' @ ' + time_now + '\n'
             logfile.write(log_text)
 
-FlairBot().init()
